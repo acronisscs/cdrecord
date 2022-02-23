@@ -1,0 +1,55 @@
+--- libschily/printf.c.orig	2003-06-15 16:22:16 +0300
++++ libschily/printf.c	2019-03-12 13:21:54 +0300
+@@ -20,7 +20,7 @@
+ 
+ #include <mconfig.h>
+ 
+-#ifdef	printf
++/*#ifdef	printf
+ #	define	__no_undef__
+ #else
+ #	define	printf		__nothing__
+@@ -29,19 +29,19 @@
+ #	define	__no_undef2__
+ #else
+ #	define	fprintf		__nothing2__
+-#endif
++#endif*/
+ 
+ #include <stdio.h>
+ #include <vadefs.h>
+ #include <standard.h>
+ #include <schily.h>
+ 
+-#ifndef	__no_undef__
++/*#ifndef	__no_undef__
+ #	undef	printf
+ #endif
+ #ifndef	__no_undef2__
+ #	undef	fprintf
+-#endif
++#endif*/
+ 
+ #define	BFSIZ	256
+ 
+--- libschily/snprintf.c.orig	2004-05-09 14:21:14.000000000 +0300
++++ libschily/snprintf.c	2019-09-16 14:56:51.983864500 +0300
+@@ -18,15 +18,15 @@
+  * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+  */
+ 
+-#define	snprintf __nothing__	/* prototype may be wrong (e.g. IRIX) */
++// #define	snprintf __nothing__	/* prototype may be wrong (e.g. IRIX) */
+ #include <mconfig.h>
+ #include <unixstd.h>		/* include <sys/types.h> try to get size_t */
+-#include <stdio.h>		/* Try again for size_t	*/
++// #include <stdio.h>		/* Try again for size_t	*/
+ #include <stdxlib.h>		/* Try again for size_t	*/
+ #include <vadefs.h>
+ #include <standard.h>
+ #include <schily.h>
+-#undef	snprintf
++// #undef	snprintf
+ 
+ EXPORT	int snprintf __PR((char *, size_t maxcnt, const char *, ...));
+ 

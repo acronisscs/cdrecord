@@ -1,0 +1,24 @@
+--- cdrecord/drv_mmc.c.orig	2004-09-10 14:24:45.406250000 +0400
++++ cdrecord/drv_mmc.c	2004-09-10 14:37:33.515625000 +0400
+@@ -2158,6 +2158,21 @@
+ 		return (ret);
+ 	}
+ 
++	if ((dummy == 0) && (track_base(trackp)->tracktype & TOCF_MULTI) &&
++			is_tao(trackp) && (key == SC_ILLEGAL_REQUEST) &&
++			(code == 0x30) && (scg_sense_qual(scgp) == 9)) {
++		/*
++		 * Current session not fixated for append
++		 */
++		if (lverbose)
++			printf("Restarting fixation in single-session mode.\n");
++		track_base(trackp)->tracktype &= ~TOCF_MULTI;
++		ret = open_session_mmc(scgp, dp, trackp);
++		if (ret < 0)
++			return ret;
++		return fixate_mmc(scgp, dp, trackp);
++	}
++
+ 	if ((dummy != 0 && (key != SC_ILLEGAL_REQUEST)) ||
+ 		/*
+ 		 * Try to suppress messages from drives that don't like fixation

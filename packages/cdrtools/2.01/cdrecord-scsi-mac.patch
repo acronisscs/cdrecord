@@ -1,0 +1,160 @@
+--- libscg/scsi-mac-iokit.c.orig	2008-10-10 20:02:37.551221600 +0400
++++ libscg/scsi-mac-iokit.c	2008-10-15 15:52:57.000000000 +0400
+@@ -57,6 +57,9 @@
+ #include <IOKit/IOCFPlugIn.h>
+ #include <IOKit/scsi-commands/SCSITaskLib.h>
+ #include <mach/mach_error.h>
++#include <IOKit/IOBSD.h>
++#include <paths.h>
++#include <IOKit/IOKitKeys.h>
+ 
+ struct scg_local {
+ 	MMCDeviceInterface	**mmcDeviceInterface;
+@@ -80,6 +83,7 @@
+ 	SCSI	*scgp;
+ 	int	what;
+ {
++	static char auth[] = "Acronis";
+ 	if (scgp != (SCSI *)0) {
+ 		switch (what) {
+ 
+@@ -90,7 +94,7 @@
+ 		 * return "schily" for the SCG_AUTHOR request.
+ 		 */
+ 		case SCG_AUTHOR:
+-			return (_scg_auth_schily);
++			return (auth);
+ 		case SCG_SCCS_ID:
+ 			return (__sccsid);
+ 		}
+@@ -109,6 +113,100 @@
+ 	return (0);
+ }
+ 
++LOCAL int matchFullPath(io_object_t device, const char* path)
++{
++	io_iterator_t iter = NULL;
++	io_object_t myDevice = NULL;
++	char deviceBsdName[MAXPATHLEN];
++	size_t devPathLength; 
++	CFTypeRef bsdNameAsCFString; 
++	Boolean gotString;
++	int i;
++
++	io_string_t devpath;
++	IORegistryEntryGetPath( device, kIOServicePlane, devpath);
++
++	for (i=0; devpath[i]; i++)
++		if ( !isalnum(devpath[i]))
++			devpath[i]='_';
++	if ( !strcmp(devpath, path)) {
++		return 1;
++	}
++
++	IORegistryEntryGetChildIterator(device, kIOServicePlane, &iter);
++	while (( myDevice = IOIteratorNext(iter)) != NULL) {
++		if (matchFullPath(myDevice, path)) {
++			if (iter != NULL) {
++				IOObjectRelease(iter);
++			}
++			return 1;
++		}
++
++ 		IOObjectRelease(myDevice);
++		myDevice = NULL;
++ 	}
++	return 0;
++}
++
++
++#define SERVICES_COUNT 2
++LOCAL io_object_t findByFullPath(const char* path)
++{
++	mach_port_t masterPort = NULL;
++	io_iterator_t scsiObjectIterator = NULL;
++	IOReturn ioReturnValue = kIOReturnSuccess;
++	CFMutableDictionaryRef dict = NULL;
++	io_object_t scsiDevice = NULL;
++	int serv;
++	int PATHDEVLength;
++	char *deviceId;
++
++
++	static char* serviceNames[SERVICES_COUNT] = {"IOCompactDiscServices", "IODVDServices"};
++	ioReturnValue = IOMasterPort(bootstrap_port, &masterPort);
++	if (ioReturnValue != kIOReturnSuccess) {
++		return NULL;
++	}
++
++	for(serv=0; serv<SERVICES_COUNT; serv++) {
++		dict = IOServiceMatching(serviceNames[serv]);
++		if (dict == NULL) {
++			continue;
++		}
++		ioReturnValue = IOServiceGetMatchingServices(masterPort, dict,
++						    &scsiObjectIterator);
++		dict = NULL;
++		if (scsiObjectIterator == NULL || (ioReturnValue != kIOReturnSuccess)) {
++			if (scsiObjectIterator != NULL) {
++				IOObjectRelease(scsiObjectIterator);
++			}
++			if (dict != NULL) {
++				CFRelease(dict);
++			}
++			continue;
++		}
++	 	while ((scsiDevice = IOIteratorNext(scsiObjectIterator)) != NULL) {
++			if (matchFullPath(scsiDevice, path))
++				break;
++	 		IOObjectRelease(scsiDevice);
++			scsiDevice = NULL;
++		}
++	}
++
++	if (scsiObjectIterator != NULL) {
++		IOObjectRelease(scsiObjectIterator);
++	}
++	if (masterPort) {
++		mach_port_deallocate(mach_task_self(), masterPort);
++	}
++ 
++	if (dict != NULL) {
++		CFRelease(dict);
++	}
++	free(deviceId);
++	return scsiDevice;
++}
++
+ 
+ /*
+  * Valid Device names:
+@@ -171,7 +269,7 @@
+ 	if (dict == NULL) {
+ 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+ 			    "Couldn't create dictionary for searching");
+-		goto out;
++		goto try_ioreg_path;
+ 	}
+ 
+ 	ioReturnValue = IOServiceGetMatchingServices(masterPort, dict,
+@@ -182,7 +280,7 @@
+ 	    (ioReturnValue != kIOReturnSuccess)) {
+ 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+ 			    "No matching device %s found.", device);
+-		goto out;
++		goto try_ioreg_path;
+ 	}
+ 
+ 	if (driveidx <= 0)
+@@ -197,6 +295,11 @@
+ 		idx++;
+ 	}
+ 
++try_ioreg_path:
++	if(scsiDevice == NULL) {
++		scsiDevice = findByFullPath(device);
++	}
++
+ 	if (scsiDevice == NULL) {
+ 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+ 			    "No matching device found. Iterator failed.");

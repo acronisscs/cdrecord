@@ -1,0 +1,84 @@
+--- cdrecord/cdrecord.c.orig	2007-02-02 13:20:46.000000000 +0300
++++ cdrecord/cdrecord.c	2007-02-02 13:49:14.000000000 +0300
+@@ -59,7 +59,7 @@
+ #include "movesect.h"
+ 
+ 
+-char	cdr_version[] = "2.01-bootcd.ru";
++char	cdr_version[] = "2.01-acronis";
+ 
+ #if defined(_POSIX_PRIORITY_SCHEDULING) && _POSIX_PRIORITY_SCHEDULING -0 >= 0
+ #ifdef  HAVE_SYS_PRIOCNTL_H	/* The preferred SYSvR4 schduler */
+@@ -374,7 +374,7 @@
+ 
+ #define	SOURCE_MODIFIED
+ #if	defined(SOURCE_MODIFIED) || !defined(IS_SCHILY_XCONFIG)
+-#define	INSERT_YOUR_EMAIL_ADDRESS_HERE "Alex Kopylov <cdrtools@bootcd.ru>"
++#define	INSERT_YOUR_EMAIL_ADDRESS_HERE "Acronis SCS Support <Appsupport@acronisscs.com>"
+ #define	NO_SUPPORT	0
+ 		printf("NOTE: this version of cdrecord is an inofficial (modified) release of cdrecord\n");
+ 		printf("      and thus may have bugs that are not present in the original version.\n");
+@@ -696,10 +696,12 @@
+ 		if (is_dvdwr && !set_cdrcmds("mmc_dvd", (cdr_t **)NULL)) {
+ 			errmsgno(EX_BAD,
+ 			"This version of cdrecord does not include DVD-R/DVD-RW support code.\n");
++#if 0
+ 			errmsgno(EX_BAD,
+ 			"If you need DVD-R/DVD-RW support, ask the Author for cdrecord-ProDVD.\n");
+ 			errmsgno(EX_BAD,
+ 			"Free test versions and free keys for personal use are at ftp://ftp.berlios.de/pub/cdrecord/ProDVD/\n");
++#endif
+ 		}
+ 		/*
+ 		 * Only exit if this is not the ProDVD test binary.
+diff -ur cdrecord.orig/drv_mmc.c cdrecord/drv_mmc.c
+--- cdrecord.orig/drv_mmc.c	2007-02-02 13:20:46.000000000 +0300
++++ cdrecord/drv_mmc.c	2007-02-02 13:49:52.000000000 +0300
+@@ -581,19 +581,23 @@
+ 			} else {			/* DVD+RW DVD+R */
+ 				errmsgno(EX_BAD,
+ 				"Found DVD+ media but DVD+R/DVD+RW support code is missing.\n");
++#if 0
+ 				errmsgno(EX_BAD,
+ 				"If you need DVD+R/DVD+RW support, ask the Author for cdrecord-ProDVD.\n");
+ 				errmsgno(EX_BAD,
+ 				"Free test versions and free keys for personal use are at ftp://ftp.berlios.de/pub/cdrecord/ProDVD/\n");
++#endif
+ 				return (dp);
+ 			}
+ 		} else if (profile >= 0x10 && profile < 0x18) {
+ 			errmsgno(EX_BAD,
+ 			"Found DVD media but DVD-R/DVD-RW support code is missing.\n");
++#if 0
+ 			errmsgno(EX_BAD,
+ 			"If you need DVD-R/DVD-RW support, ask the Author for cdrecord-ProDVD.\n");
+ 			errmsgno(EX_BAD,
+ 			"Free test versions and free keys for personal use are at ftp://ftp.berlios.de/pub/cdrecord/ProDVD/\n");
++#endif
+ 			return (dp);
+ 		}
+ 	} else {
+@@ -663,10 +667,12 @@
+ 	if (is_dvd) {
+ 		errmsgno(EX_BAD,
+ 		"Found DVD media but DVD-R/DVD-RW support code is missing.\n");
++#if 0
+ 		errmsgno(EX_BAD,
+ 		"If you need DVD-R/DVD-RW support, ask the Author for cdrecord-ProDVD.\n");
+ 		errmsgno(EX_BAD,
+ 		"Free test versions and free keys for personal use are at ftp://ftp.berlios.de/pub/cdrecord/ProDVD/\n");
++#endif
+ 	}
+ 	return (dp);
+ }
+--- readcd/readcd.c.orig	2007-02-02 13:20:46.000000000 +0300
++++ readcd/readcd.c	2007-02-02 13:50:40.000000000 +0300
+@@ -51,7 +51,7 @@
+ #undef	qpto96
+ #include "movesect.h"
+ 
+-char	cdr_version[] = "2.01-bootcd.ru";
++char	cdr_version[] = "2.01-acronis";
+ 
+ #if	defined(PROTOTYPES)
+ #define	UINT_C(a)	(a##u)

@@ -1,0 +1,72 @@
+--- include/mconfig.h.orig	2009-09-03 16:12:26.000000000 +0400
++++ include/mconfig.h	2009-09-03 16:03:46.000000000 +0400
+@@ -492,17 +492,10 @@
+ #include <sys/time.h>
+ #include <time.h>
+ 
+-#define	sleep(a)	sleep((unsigned long)(a)*1000l);
++#define _BSDTYPES_DEFINED
+ 
+-/* Mingw32 has no timezone structure */
+-struct	timezone {
+-	int		tz_minuteswest;
+-	int		tz_dsttime;
+-};
+-
+-/* Mingw32 has no gettimeofday() */
+-extern	int		gettimeofday(struct timeval *tp, struct timezone *tzp);
+-#define HAVE_GETTIMEOFDAY 1
++/*__declspec(dllimport) void __stdcall Sleep(unsigned long);*/
++/*#define	sleep(a)	Sleep((unsigned long)(a)*1000l);*/
+ 
+ /* Mingw32's stat() not allow trailing slash */
+ extern	int		__mgw32__stat(const char *path, struct stat *buf);
+--- libmgw32/mgw32.c.orig	2009-09-03 16:12:26.000000000 +0400
++++ libmgw32/mgw32.c	2009-09-03 15:48:42.000000000 +0400
+@@ -29,46 +29,6 @@
+ #include <sys/time.h>
+ #include <time.h>
+ 
+-struct	timezone {
+-	int		tz_minuteswest;
+-	int		tz_dsttime;
+-};
+-
+-int gettimeofday(struct timeval *tp, struct timezone *tzp) {
+-
+-	SYSTEMTIME SystemTime;
+-	struct tm t;
+-	time_t tv_sec;
+-
+-	GetSystemTime(&SystemTime);
+-
+-	t.tm_sec = SystemTime.wSecond;
+-	t.tm_sec -= _timezone;
+-	t.tm_sec -= (_daylight > 0 ? -60 : 0);
+-	t.tm_min = SystemTime.wMinute;
+-	t.tm_hour = SystemTime.wHour;
+-	t.tm_mday = SystemTime.wDay;
+-	t.tm_mon = SystemTime.wMonth - 1;
+-	t.tm_year = SystemTime.wYear - 1900;
+-	t.tm_wday = 0;
+-	t.tm_yday = 0;
+-	t.tm_isdst = 0;
+-
+-	if(tp) {
+-
+-		tp->tv_sec = mktime(&t);
+-		tp->tv_usec = (long)SystemTime.wMilliseconds * 1000l;
+-	}
+-	
+-	if(tzp) {
+-
+-		tzp->tz_minuteswest = _timezone / 60;
+-		tzp->tz_dsttime = _daylight;
+-	}
+-
+-	return (0);
+-}
+-
+ int __mgw32__stat(const char *path, struct stat *buf){
+ 
+ 	char tmppath[PATH_MAX+1];

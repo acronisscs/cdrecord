@@ -1,0 +1,37 @@
+--- cdrecord/cue.c.stdio	2010-12-16 18:01:09.000000000 +0300
++++ cdrecord/cue.c	2010-12-16 18:01:22.000000000 +0300
+@@ -249,7 +249,7 @@ LOCAL	char	*skipwhite	__PR((const char *
+ LOCAL	char	*peekword	__PR((void));
+ LOCAL	char	*lineend	__PR((void));
+ LOCAL	char	*markword	__PR((char *delim));
+-LOCAL	char	getdelim	__PR((void));
++LOCAL	char	cdr_getdelim	__PR((void));
+ LOCAL	char	*getnextitem	__PR((char *delim));
+ LOCAL	char	*neednextitem	__PR((char *delim));
+ LOCAL	char	*nextword	__PR((void));
+@@ -260,6 +260,7 @@ LOCAL	char	*needitem	__PR((void));
+ LOCAL	void	checkextra	__PR((void));
+ LOCAL	void	cueabort	__PR((const char *fmt, ...));
+ 
++#define getdelim cdr_getdelim
+ #ifdef	CUE_MAIN
+ int	debug;
+ int	xdebug = 1;
+--- include/schily.h.stdio	2010-12-17 19:25:30.000000000 +0300
++++ include/schily.h	2010-12-17 19:26:02.000000000 +0300
+@@ -108,6 +108,7 @@ extern	int	fexecle __PR((const char *, F
+ 		/* 6th arg not const, fexecv forces av[ac] = NULL */
+ extern	int	fexecv __PR((const char *, FILE *, FILE *, FILE *, int,
+ 							char **));
++#define fexecve cdr_fexecve
+ extern	int	fexecve __PR((const char *, FILE *, FILE *, FILE *,
+ 					char * const *, char * const *));
+ extern	int	fspawnv __PR((FILE *, FILE *, FILE *, int, char * const *));
+@@ -187,6 +188,7 @@ extern	char	*fillbytes __PR((void *, int
+ extern	char	*findbytes __PR((const void *, int, char));
+ extern	int	findline __PR((const char *, char, const char *,
+ 							int, char **, int));
++#define getline cdr_getline
+ extern	int	getline __PR((char *, int));
+ extern	int	getstr __PR((char *, int));
+ extern	int	breakline __PR((char *, char, char **, int));

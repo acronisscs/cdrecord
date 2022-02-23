@@ -1,0 +1,71 @@
+--- readcd/readcd.c.orig	2006-05-03 11:01:23.203125000 +0400
++++ readcd/readcd.c	2007-01-30 18:49:04.812500000 +0300
+@@ -774,7 +774,8 @@
+ {
+ 	rparm_t	rp;
+ 
+-	read_capacity(scgp);
++	if (read_capacity(scgp) < 0)
++		comerrno(EX_BAD, "Read capacity failed\n");
+ 	print_capacity(scgp, stderr);
+ 
+ 	rp.errors = 0;
+@@ -806,7 +807,8 @@
+ 	if (osecsize != 2048)
+ 		select_secsize(scgp, 2048);
+ 
+-	read_capacity(scgp);
++	if (read_capacity(scgp) < 0)
++		comerrno(EX_BAD, "Read capacity failed\n");
+ 	print_capacity(scgp, stderr);
+ 
+ 	rp.errors = 0;
+@@ -853,7 +855,8 @@
+ 	parm_t	parm;
+ 	rparm_t	rp;
+ 
+-	read_capacity(scgp);
++	if (read_capacity(scgp) < 0)
++		comerrno(EX_BAD, "Read capacity failed\n");
+ 	print_capacity(scgp, stderr);
+ 
+ 	parm.start = ULONG_C(0xF0000000);
+@@ -887,7 +890,8 @@
+ 	if (osecsize != 2048)
+ 		select_secsize(scgp, 2048);
+ 
+-	read_capacity(scgp);
++	if (read_capacity(scgp) < 0)
++		comerrno(EX_BAD, "Read capacity failed\n");
+ 
+ 	rp.errors = 0;
+ 	rp.c2_errors = 0;
+@@ -1119,7 +1123,8 @@
+ 	if (osecsize != 2048)
+ 		select_secsize(scgp, 2048);
+ 
+-	read_capacity(scgp);
++	if (read_capacity(scgp) < 0)
++		comerrno(EX_BAD, "Read capacity failed\n");
+ 	print_capacity(scgp, stderr);
+ 
+ 	rp.errors = 0;
+@@ -1937,7 +1942,7 @@
+ #	if	defined(HAVE_RAND)
+ 	extern	int	rand __PR((void));
+ 
+-	return (rand() % n);
++	return (n? rand() % n: 0);
+ #	else
+ 	return (0);
+ #	endif
+@@ -1958,7 +1963,8 @@
+ /*	int	err = 0;*/
+ 
+ 	select_secsize(scgp, 2352);
+-	read_capacity(scgp);
++	if (read_capacity(scgp) < 0)
++		comerrno(EX_BAD, "Read capacity failed\n");
+ 	print_capacity(scgp, stderr);
+ 	fillbytes(Sbuf, 50*2352, 0);
+ 	if (read_g1(scgp, Sbuf, 0, 50) < 0)

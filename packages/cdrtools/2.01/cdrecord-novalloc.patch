@@ -1,0 +1,29 @@
+--- libscg/scsi-linux-sg.c.orig	2004-05-20 17:42:12.000000000 +0400
++++ libscg/scsi-linux-sg.c	2004-09-10 13:14:40.984375000 +0400
+@@ -993,6 +993,8 @@
+ 	return (maxdma);
+ }
+ 
++#define palign(x, a)	(((char *)(x)) + ((a) - 1 - (((unsigned)((x)-1))%(a))))
++
+ LOCAL void *
+ scgo_getbuf(scgp, amt)
+ 	SCSI	*scgp;
+@@ -1010,10 +1012,17 @@
+ 	 * copying the whole buffer contents when
+ 	 * setting up the /dev/sg data structures.
+ 	 */
++#ifdef HAVE_VALLOC
+ 	ret = valloc((size_t)(amt+getpagesize()));
++#else
++	ret = malloc((size_t)(amt+getpagesize()*2));
++#endif
+ 	if (ret == NULL)
+ 		return (ret);
+ 	scgp->bufbase = ret;
++#ifndef HAVE_VALLOC
++	ret = palign(ret,getpagesize());
++#endif
+ 	ret += getpagesize();
+ 	scglocal(scgp)->SCSIbuf = ret;
+ 	return ((void *)ret);

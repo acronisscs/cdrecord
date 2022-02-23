@@ -1,0 +1,43 @@
+A tip from From: Juergen Keil <jk@tools.de> 
+
+Solaris 9 x86 will not allow DMA for ATAPI CD/DVD-ROM drives even if
+the eeprom command shows: 
+
+	atapi-dma-enabled=1
+
+Here is a patch to the file /platform/i86pc/kernel/drv/ata
+that allows you to use DMA again. Note that you need to be extremely careful
+when applying the patch because it may completely break your installation
+if you don't do it right.
+
+% adb /platform/i86pc/kernel/drv/ata 
+ata_init_drive_pcidma,10?ia 
+ata_init_drive_pcidma: pushl %ebp 
+ata_init_drive_pcidma+1: movl %esp,%ebp 
+ata_init_drive_pcidma+3: subl $4,%esp 
+ata_init_drive_pcidma+6: movl +8(%ebp),%eax 
+ata_init_drive_pcidma+9: cmpb $1,+0x1ad(%eax) 
+ata_init_drive_pcidma+0x10: jne +0x111 <ata_init_drive_pcidma+0x121> 
+ata_init_drive_pcidma+0x16: movl +0xc(%ebp),%eax 
+ata_init_drive_pcidma+0x19: movl +0x204(%eax),%eax 
+ata_init_drive_pcidma+0x1f: andl $1,%eax 
+ata_init_drive_pcidma+0x22: je +0x1a <ata_init_drive_pcidma+0x3c> 
+ata_init_drive_pcidma+0x24: movl +0xc(%ebp),%eax 
+ata_init_drive_pcidma+0x27: movzwl +4(%eax),%eax 
+ata_init_drive_pcidma+0x2b: sarl $8,%eax 
+ata_init_drive_pcidma+0x2e: andl $0x1f,%eax 
+ata_init_drive_pcidma+0x31: cmpl $5,%eax 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This is the check for a type 5 ATAPI device 
+ata_init_drive_pcidma+0x34: jne +8 <ata_init_drive_pcidma+0x3c> 
+ata_init_drive_pcidma+0x36: 
+
+Here's a patch that replaces the "cmpl $5" with a "cmpl $55", so 
+that all ATAPI devices will perform DMA transfers: 
+ 
+# cd /platform/i86pc/kernel/drv 
+# cp ata ata-orig 
+# echo 'ata_init_drive_pcidma+0x31?W 7555f883' | adb -w ata 
+
+Note that the exact position of the instruction that needs to be patched
+may vary depending on the version of Solaris you use. Be extremely careful
+when applying the patch.

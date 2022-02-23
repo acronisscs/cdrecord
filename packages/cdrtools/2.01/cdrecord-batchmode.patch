@@ -1,0 +1,30 @@
+--- cdrecord/cdrecord.c.orig	2004-09-08 21:26:36.000000000 +0400
++++ cdrecord/cdrecord.c	2009-09-03 17:31:48.000000000 +0400
+@@ -278,6 +278,11 @@
+ 	/* This gives wildcard expansion with Non-Posix shells with EMX */
+ 	_wildcard(&ac, &av);
+ #endif
++#ifdef _WIN32
++	setvbuf(stdout, (char *)NULL, _IONBF, 0);
++#else
++	setvbuf(stdout, (char *)NULL, _IOLBF, 0);
++#endif
+ 	save_args(ac, av);
+ 	oeuid = geteuid();		/* Remember saved set uid	*/
+ 
+@@ -1432,6 +1437,7 @@
+ 		printf("No chance to quit anymore.");
+ 		goto grace_done;
+ 	}
++	if (isatty(STDOUT_FILENO)) {
+ 	printf("Last chance to quit, starting %s write in %d seconds.",
+ 		(dp->cdr_cmdflags & F_DUMMY)?"dummy":"real", gracetime);
+ 	flush();
+@@ -1465,6 +1471,7 @@
+ 	}
+ grace_done:
+ 	printf(" Operation starts.");
++	}
+ 	flush();
+ 	signal(SIGINT, SIG_DFL);
+ 	signal(SIGHUP, SIG_DFL);

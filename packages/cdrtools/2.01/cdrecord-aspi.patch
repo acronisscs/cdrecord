@@ -1,0 +1,277 @@
+--- libscg/scg/aspi-win32.h.orig	1999-05-12 01:46:51 +0300
++++ libscg/scg/aspi-win32.h	2019-03-12 11:56:13 +0300
+@@ -1,6 +1,9 @@
+ #ifndef __ASPI_WIN32_H_
+ #define __ASPI_WIN32_H_
+ 
++#define PACKED __attribute__((packed))
++#define FAR
++
+ #include <Windows.h>
+ 
+ /***************************************************************************
+@@ -166,15 +169,28 @@
+   BYTE     SRB_Cmd;           /* 00/000 ASPI cmd code == SC_RESET_DEV      */
+   BYTE     SRB_Status;        /* 01/001 ASPI command status byte           */
+   BYTE     SRB_HaId;          /* 02/002 ASPI host adapter number           */
+-  DWORD    SRB_Flags;	      /* 04/004 Reserved                           */
++  BYTE     SRB_Flags;         /* 03/003 ASPI request flags                 */
++  DWORD    SRB_Hdr_Rsvd;      /* 04/004 Reserved, MUST = 0                 */
+   BYTE     SRB_Target;        /* 08/008 Target's SCSI ID                   */
+   BYTE     SRB_Lun;           /* 09/009 Target's LUN number                */
+   BYTE     SRB_Rsvd1[12];     /* 0A/010 Reserved for alignment             */
+   BYTE     SRB_HaStat;        /* 16/022 Host Adapter Status                */
+   BYTE     SRB_TargStat;      /* 17/023 Target Status                      */
+   VOID FAR *SRB_PostProc;     /* 18/024 Post routine                       */
+-  BYTE     SRB_Rsvd2[36];     /* 1C/028 Reserved, must = 0                 */
+-} SRB_BusDeviceReset, *PSRB_BusDeviceReset, FAR *LPSRB_BusDeviceReset;
++  BYTE     SRB_Rsvd2[36];     /* 1C/028 Reserved, MUST = 0                 */
++} PACKED SRB_BusDeviceReset, *PSRB_BusDeviceReset, FAR *LPSRB_BusDeviceReset;
++
++typedef struct
++{
++  BYTE     SRB_Cmd;           /* 00/000 ASPI cmd code = SC_GETSET_TIMEOUTS */
++  BYTE     SRB_Status;        /* 01/001 ASPI command status byte           */
++  BYTE     SRB_HaId;          /* 02/002 ASPI host adapter number           */
++  BYTE     SRB_Flags;         /* 03/003 ASPI request flags                 */
++  DWORD    SRB_Hdr_Rsvd;      /* 04/004 Reserved, MUST = 0                 */
++  BYTE     SRB_Target;        /* 08/008 Target's SCSI ID                   */
++  BYTE     SRB_Lun;           /* 09/009 Target's LUN number                */
++  DWORD    SRB_Timeout;       /* 0A/010 Timeout in half seconds            */
++} PACKED SRB_GetSetTimeouts, *PSRB_GetSetTimeouts, FAR *LPSRB_GetSetTimeouts;
+ 
+ typedef struct tag_ASPI32BUFF
+ {
+@@ -191,6 +207,6 @@
+   BYTE      SRB_HaId;
+   BYTE      SRB_Flags;
+   DWORD     SRB_Hdr_Rsvd;
+-} SRB, *PSRB, FAR *LPSRB;
++} PACKED SRB, *PSRB, FAR *LPSRB;
+ 
+ #endif
+
+--- libscg/scsi-wnt.c.orig	2010-08-17 18:26:34.000000000 +0400
++++ libscg/scsi-wnt.c	2010-08-17 18:54:26.000000000 +0400
+@@ -1,7 +1,6 @@
+ /* @(#)scsi-wnt.c	1.45 04/07/19 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key */
+ #ifndef lint
+-static	char __sccsid[] =
+-	"@(#)scsi-wnt.c	1.45 04/07/19 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key";
++static	char __sccsid[] = "@(#)$Id: cdrecord-aspi.patch 487558 2010-08-17 15:27:37Z yuri $";
+ #endif
+ /*
+  *	Interface for the Win32 ASPI library.
+@@ -69,15 +68,15 @@
+  *	Choose your name instead of "schily" and make clear that the version
+  *	string is related to a modified source.
+  */
+-LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.45";	/* The version for this transport*/
+-LOCAL	char	_scg_itrans_version[] = "SPTI-scsi-wnt.c-1.45";	/* The version for SPTI */
++LOCAL	char	_scg_trans_version[] = "$Revision: 487558 $";	/* The version for this transport*/
++LOCAL	char	_scg_itrans_version[] = "SPTI-$Revision: 487558 $";	/* The version for SPTI */
+ 
+ /*
+  * Local defines and constants
+  */
+ /*#define DEBUG_WNTASPI*/
+ 
+-#define	MAX_SCG		16	/* Max # of SCSI controllers	*/
++#define	MAX_SCG		255	/* Max # of SCSI controllers	*/
+ #define	MAX_TGT		16	/* Max # of SCSI Targets	*/
+ #define	MAX_LUN		8	/* Max # of SCSI LUNs		*/
+ 
+@@ -102,7 +101,7 @@
+ LOCAL	int	AspiLoaded			= 0;    /* ASPI or SPTI */
+ LOCAL	HANDLE	hAspiLib			= NULL;	/* Used for Loadlib */
+ 
+-#define	MAX_DMA_WNT	(63L*1024L) /* ASPI-Driver  allows up to 64k ??? */
++#define	MAX_DMA_WNT	(32L*1024L) /* ASPI-Driver  allows up to 32k ??? */
+ 
+ /*
+  * Local function prototypes
+@@ -135,7 +134,7 @@
+  * See http://www.ste-home.de/cdrtools-spti/
+  */
+ 
+-#define	PREFER_SPTI	1		/* Prefer SPTI if available, else try ASPI, force ASPI with dev=ASPI: */
++/* #define	PREFER_SPTI	1 */	/* Prefer SPTI if available, else try ASPI, force ASPI with dev=ASPI: */
+ /* #define	CREATE_NONSHARED 1 */	/* open CDROM-Device not SHARED if possible */
+ /* #define	_DEBUG_SCSIPT 1   */
+ #ifdef _DEBUG_SCSIPT
+@@ -785,7 +784,7 @@
+ 		 * return "schily" for the SCG_AUTHOR request.
+ 		 */
+ 		case SCG_AUTHOR:
+-			return (_scg_auth_schily);
++			return ("acronis");
+ 		case SCG_SCCS_ID:
+ 			return (__sccsid);
+ 		}
+@@ -908,6 +907,18 @@
+ 	atexit(exit_func);
+ 
+ 	/*
++	 * Report DevNode
++	 */
++	if (scgp->overbose && pfnTranslateASPI32Address != NULL) {
++		DWORD AspiPath = (busno << 16) | (tgt << 8) | tlun;
++		DWORD DevNode = 0;
++		if ((*pfnTranslateASPI32Address)(&AspiPath, &DevNode)) {
++			js_fprintf((FILE *)scgp->errfile,
++					"DEVNODE: %08lX\n", DevNode);
++		}
++	}
++
++	/*
+ 	 * Success after all
+ 	 */
+ 	return (1);
+@@ -938,7 +949,7 @@
+ 		js_fprintf((FILE *)scgp->errfile,
+ 				"scgo_getbuf: %ld bytes\n", amt);
+ 	}
+-	scgp->bufbase = malloc((size_t)(amt));
++	scgp->bufbase = VirtualAlloc(NULL,amt,MEM_COMMIT,PAGE_READWRITE);
+ 	return (scgp->bufbase);
+ }
+ 
+@@ -947,7 +958,7 @@
+ 	SCSI	*scgp;
+ {
+ 	if (scgp->bufbase)
+-		free(scgp->bufbase);
++		VirtualFree(scgp->bufbase,0,MEM_RELEASE);
+ 	scgp->bufbase = NULL;
+ }
+ 
+@@ -1076,18 +1087,6 @@
+ 		EventStatus = WaitForSingleObject(Event, INFINITE);
+ 	}
+ 
+-
+-	/**************************************************/
+-	/* Reset event to non-signaled state.		  */
+-	/**************************************************/
+-
+-	if (EventStatus == WAIT_OBJECT_0) {
+-		/*
+-		 * Clear event
+-		 */
+-		ResetEvent(Event);
+-	}
+-
+ 	/*
+ 	 * Close the event handle
+ 	 */
+@@ -1209,9 +1208,13 @@
+ 		sp->ux_errno = EIO;
+ 		break;
+ 
++	case SS_NO_DEVICE:		/* 0x82 SCSI device not installed    */
++		sp->error = SCG_FATAL;
++		sp->ux_errno = ENODEV;
++		break;
++
+ 	case SS_INVALID_CMD:		/* 0x80 Invalid ASPI command	    */
+ 	case SS_INVALID_HA:		/* 0x81 Invalid host adapter number */
+-	case SS_NO_DEVICE:		/* 0x82 SCSI device not installed   */
+ 
+ 	case SS_INVALID_SRB:		/* 0xE0 Invalid parameter set in SRB */
+ 	case SS_ILLEGAL_MODE:		/* 0xE2 Unsupported Windows mode    */
+@@ -1268,10 +1271,12 @@
+ 	SCSI		*scgp;
+ {
+ 	struct scg_cmd		*sp = scgp->scmd;
++	DWORD			TimeoutStatus = SS_NO_ASPI;
+ 	DWORD			Status = 0;
+ 	DWORD			EventStatus = WAIT_OBJECT_0;
+ 	HANDLE			Event	 = NULL;
+ 	struct aspi_cmd		ac;
++	SRB_GetSetTimeouts	st;
+ 	SRB_ExecSCSICmd		*s;
+ 
+ 	s = &ac.s;
+@@ -1298,6 +1303,7 @@
+ 	sp->u_scb.cmd_scb[0]	= 0;
+ 	sp->resid		= 0;
+ 
++	memset(&st, 0, sizeof(st));	/* Clear SRB structure */
+ 	memset(&ac, 0, sizeof (ac));	/* Clear SRB structure */
+ 
+ 	/*
+@@ -1320,6 +1326,13 @@
+ 	/*
+ 	 * Fill ASPI structure
+ 	 */
++	st.SRB_Cmd	= SC_GETSET_TIMEOUTS;		/* SCSI Command			*/
++	st.SRB_HaId	= scg_scsibus(scgp);		/* Host adapter number		*/
++	st.SRB_Flags	= SRB_DIR_OUT;			/* Flags			*/
++	st.SRB_Target	= scg_target(scgp);		/* Target SCSI ID		*/
++	st.SRB_Lun	= scg_lun(scgp);		/* Target SCSI LUN		*/
++	st.SRB_Timeout	= sp->timeout*2;		/* Timeout			*/
++
+ 	s->SRB_Cmd	 = SC_EXEC_SCSI_CMD;		/* SCSI Command			*/
+ 	s->SRB_HaId	 = scg_scsibus(scgp);		/* Host adapter number		*/
+ 	s->SRB_Flags	 = SRB_EVENT_NOTIFY;		/* Flags			*/
+@@ -1360,24 +1373,24 @@
+ 	 * ------------ Send SCSI command --------------------------
+ 	 */
+ 
+-	ResetEvent(Event);			/* Clear event handle	    */
+ 	if (bUsingSCSIPT) {
+ #ifdef _DEBUG_SCSIPT
+ 		scgp_errfile = (FILE *)scgp->errfile;
+ #endif
+ 		Status = SPTIExecSCSICommand(s, sp->timeout, FALSE);
+ 	}
+-	else
++	else {
++		TimeoutStatus = pfnSendASPI32Command((LPSRB)&st); /* Set timeout */
+ 		Status = pfnSendASPI32Command((LPSRB)s); /* Initiate SCSI command */
++	}
+ 	if (Status == SS_PENDING) {		/* If in progress	    */
+ 		/*
+ 		 * Wait untill command completes, or times out.
+ 		 */
+-		EventStatus = WaitForSingleObject(Event, sp->timeout*1000L);
+-/*		EventStatus = WaitForSingleObject(Event, 10L);*/
+-
+-		if (EventStatus == WAIT_OBJECT_0)
+-			ResetEvent(Event);	/* Clear event, time out    */
++		if (TimeoutStatus == SS_COMP)
++			EventStatus = WaitForSingleObject(Event, INFINITE);
++		else
++			EventStatus = WaitForSingleObject(Event, sp->timeout*1000L);
+ 
+ 		if (s->SRB_Status == SS_PENDING) { /* Check if we got a timeout */
+ 			if (scgp->debug > 0) {
+@@ -1385,7 +1398,6 @@
+ 						"Timeout....\n");
+ 			}
+ 			scsiabort(scgp, s);
+-			ResetEvent(Event);	/* Clear event, time out    */
+ 			CloseHandle(Event);	/* Close the event handle   */
+ 
+ 			sp->error = SCG_TIMEOUT;
+@@ -1547,7 +1559,7 @@
+ 	 */
+ 	if (hAspiLib == NULL) {
+ #ifdef	not_done_later
+-		js_fprintf((FILE *)scgp->errfile, "Can not load ASPI driver! ");
++		js_fprintf((FILE *)scgp->errfile, "Can not load ASPI driver!\n");
+ #endif
+ 		return (FALSE);
+ 	}
+@@ -1694,11 +1706,6 @@
+ 	s.SRB_PostProc = (LPVOID)Event;
+ 
+ 	/*
+-	 * Clear event
+-	 */
+-	ResetEvent(Event);
+-
+-	/*
+ 	 * Initiate SCSI command
+ 	 */
+ 	Status = pfnSendASPI32Command((LPSRB)&s);

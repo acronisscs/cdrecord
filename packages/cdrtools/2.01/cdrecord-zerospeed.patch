@@ -1,0 +1,20 @@
+--- cdrecord/drv_mmc.c.orig	2009-09-03 16:30:44.000000000 +0400
++++ cdrecord/drv_mmc.c	2009-09-03 16:56:46.000000000 +0400
+@@ -1610,7 +1610,7 @@
+ 	BOOL	forcespeed = FALSE;
+ 	BOOL	dummy = (dp->cdr_cmdflags & F_DUMMY) != 0;
+ 
+-	if (speedp)
++	if (speedp && *speedp)
+ 		curspeed = *speedp;
+ 
+ 	/*
+@@ -1705,7 +1705,7 @@
+ 	}
+ 
+ 	if (scsi_get_speed(scgp, 0, &val) >= 0) {
+-		if (val > 0) {
++		if (val >= 176) {
+ 			curspeed = val / 176;
+ 			*speedp = curspeed;
+ 		}
